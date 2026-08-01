@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1E88E5">
+  <meta name="description" content="荧光检测平台 - 荧光强度检测工具">
+  <title>荧光检测平台</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ======== 加载遮罩 ======== -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">处理中...</p>
+  </div>
+
+  <!-- ======== Toast 提示 ======== -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ============================================================ -->
+  <!--  页面 1：开始页                                                   -->
+  <!-- ============================================================ -->
+  <section id="start-page" class="page active">
+    <div class="start-container">
+      <div class="start-logo">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="38" stroke="#42A5F5" stroke-width="3" fill="#E3F2FD"/>
+          <circle cx="40" cy="40" r="20" fill="#42A5F5" opacity="0.3"/>
+          <circle cx="40" cy="40" r="10" fill="#1E88E5"/>
+          <circle cx="40" cy="40" r="4" fill="#FFFFFF"/>
+        </svg>
+      </div>
+
+      <h1 class="start-title">荧光检测平台</h1>
+      <p class="start-subtitle">荧光强度检测</p>
+
+      <div class="start-buttons">
+        <button id="btn-start-detect" class="btn btn-primary btn-lg">
+          开始检测
+        </button>
+        <button id="btn-view-history" class="btn btn-secondary btn-lg">
+          查看历史记录
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  页面 2：拍照页                                                   -->
+  <!-- ============================================================ -->
+  <section id="camera-page" class="page">
+    <div class="header-bar">
+      <button id="btn-camera-back" class="btn-back">← 返回</button>
+      <span class="header-title">拍照检测荧光</span>
+      <span class="header-placeholder"></span>
+    </div>
+
+    <div class="camera-preview-container">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <!-- 拍照闪白动画 -->
+      <div id="camera-flash" class="camera-flash"></div>
+    </div>
+
+    <div class="camera-controls">
+      <button id="btn-capture" class="btn-capture" title="拍照">
+        <span class="capture-inner"></span>
+      </button>
+      <p class="capture-hint">点击拍照</p>
+      <div class="camera-alt-actions">
+        <button id="btn-pick-file" class="btn btn-pick-file">📷 从相册选择照片</button>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+      </div>
+    </div>
+
+    <!-- 隐藏的 Canvas 用于捕获照片 -->
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  页面 3：选区域页                                                  -->
+  <!-- ============================================================ -->
+  <section id="roi-select-page" class="page">
+    <div class="header-bar">
+      <button id="btn-roi-back" class="btn-back">← 返回</button>
+      <span class="header-title">选择荧光区域</span>
+      <span class="header-placeholder"></span>
+    </div>
+
+    <p class="roi-hint">在图片上拖动以选择荧光区域</p>
+
+    <div class="roi-image-container">
+      <canvas id="roi-image-canvas" class="roi-image-canvas"></canvas>
+      <canvas id="roi-overlay-canvas" class="roi-overlay-canvas"></canvas>
+    </div>
+
+    <div class="roi-actions">
+      <button id="btn-analyze" class="btn btn-primary btn-lg" disabled>
+        开始分析
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  页面 4：结果页                                                   -->
+  <!-- ============================================================ -->
+  <section id="results-page" class="page">
+    <div class="header-bar">
+      <button id="btn-results-back" class="btn-back">← 返回</button>
+      <span class="header-title">检测结果</span>
+      <span class="header-placeholder"></span>
+    </div>
+
+    <!-- 图片切换标签 -->
+    <div class="results-tabs">
+      <button id="tab-original" class="tab-btn active">原图</button>
+      <button id="tab-pseudocolor" class="tab-btn">伪彩色图</button>
+    </div>
+
+    <!-- 图片展示 -->
+    <div class="results-image-container">
+      <canvas id="results-image-canvas" class="results-image-canvas"></canvas>
+    </div>
+
+    <!-- 荧光数据卡片 -->
+    <div class="results-cards">
+      <div class="stat-card">
+        <span class="stat-label">平均荧光强度</span>
+        <span class="stat-value" id="stat-mean">--</span>
+        <span class="stat-unit">a.u.</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">总荧光密度</span>
+        <span class="stat-value" id="stat-integrated">--</span>
+        <span class="stat-unit">a.u.</span>
+      </div>
+    </div>
+
+    <!-- ROI 和时间信息 -->
+    <div class="results-info">
+      <span id="results-roi-size">ROI: --</span>
+      <span id="results-time">时间: --</span>
+    </div>
+
+    <!-- 阿尔兹海默预留区域 -->
+    <div class="alzheimer-reserved">
+      <div class="alzheimer-label">阿尔兹海默症定量检测</div>
+      <div class="alzheimer-placeholder">— 待开发 —</div>
+    </div>
+
+    <!-- 保存按钮 -->
+    <div class="results-actions">
+      <button id="btn-save-result" class="btn btn-primary btn-lg">
+        保存记录并返回首页
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  页面 5：历史记录页                                                -->
+  <!-- ============================================================ -->
+  <section id="history-page" class="page">
+    <div class="header-bar">
+      <button id="btn-history-back" class="btn-back">← 返回</button>
+      <span class="header-title">检测历史</span>
+      <span class="header-placeholder"></span>
+    </div>
+
+    <div id="history-list" class="history-list">
+      <!-- 动态渲染 -->
+    </div>
+
+    <div id="history-empty" class="history-empty">
+      <p>暂无检测记录</p>
+    </div>
+
+    <div class="history-footer">
+      <span id="history-count" class="history-count">共 0 条记录</span>
+      <button id="btn-clear-all" class="btn-clear-all">清空所有记录</button>
+    </div>
+  </section>
+
+  <!-- ======== 脚本加载（按依赖顺序） ======== -->
+  <script src="js/constants.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/utif.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/roi.js"></script>
+  <script src="js/imageProc.js"></script>
+  <script src="js/pseudocolor.js"></script>
+  <script src="js/results.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

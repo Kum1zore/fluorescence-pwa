@@ -1,0 +1,9 @@
+# Claude Code 内部文件
+.claude/
+
+# 开发日志（无需部署）
+devlog/
+
+# 系统文件
+.DS_Store
+Thumbs.db
