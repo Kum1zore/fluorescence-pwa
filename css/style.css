@@ -169,8 +169,18 @@ html, body {
 /* ---- 拍照页 ---- */
 #camera-page {
   background: #000;
-  height: 100vh;
-  height: 100dvh;   /* 固定为可视高度，保证拍照按钮首屏可见 */
+}
+
+/* 拍照页需占满可视区域且不可滚动。
+   用 fixed + inset 锁定到可视视口，不依赖 dvh 单位，
+   任何浏览器都不会因地址栏高度把底部拍照按钮挤出屏幕 */
+#camera-page.active {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;        /* 低于 loading-overlay(9998) 与 toast(9999) */
   overflow: hidden;
 }
 
@@ -266,6 +276,28 @@ html, body {
 
 .btn-pick-file:active {
   background: rgba(255,255,255,0.25);
+}
+
+/* 屏幕高度不足时（小屏手机、横屏）进一步压缩控件，保证拍照按钮不被挤出 */
+@media (max-height: 640px) {
+  .camera-controls {
+    padding: 8px 16px 10px;
+  }
+  .btn-capture {
+    width: 58px;
+    height: 58px;
+    border-width: 3px;
+  }
+  .capture-inner {
+    width: 44px;
+    height: 44px;
+  }
+  .capture-hint {
+    margin-top: 4px;
+  }
+  .camera-alt-actions {
+    margin-top: 8px;
+  }
 }
 
 /* ---- 选区域页 ---- */
