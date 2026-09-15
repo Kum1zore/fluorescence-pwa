@@ -17,6 +17,18 @@
         .catch(function(err) {
           console.warn('[App] Service Worker registration failed:', err.message);
         });
+
+      // Service Worker 更新后自动刷新一次，确保用户拿到最新代码
+      // 首次安装时还没有 controller，此时不刷新，避免多余的一次重载
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloading = false;
+
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!hadController || reloading) return;
+        reloading = true;
+        console.log('[App] Service Worker 已更新，刷新页面加载最新版本');
+        window.location.reload();
+      });
     }
 
     // 2. 初始化 IndexedDB

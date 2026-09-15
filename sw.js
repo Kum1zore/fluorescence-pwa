@@ -1,7 +1,8 @@
 // Service Worker — 荧光检测平台
-// 缓存优先策略，支持离线使用
+// 策略：同源资源「网络优先 + 缓存回退」，跨域资源「缓存优先」
+// 网络优先保证每次推送的新代码立即生效，离线时自动回退到缓存
 
-const CACHE_NAME = 'fluorescence-v1';
+const CACHE_NAME = 'fluorescence-v2';
 
 // 需要预缓存的所有静态资源
 const PRECACHE_URLS = [
@@ -11,6 +12,7 @@ const PRECACHE_URLS = [
   './css/style.css',
   './js/constants.js',
   './js/ui.js',
+  './js/utif.js',
   './js/storage.js',
   './js/camera.js',
   './js/roi.js',
@@ -25,7 +27,8 @@ const PRECACHE_URLS = [
   './icons/icon-152.png',
   './icons/icon-192.png',
   './icons/icon-384.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-1024.png'
 ];
 
 // ====== Install：预缓存所有静态资源 ======
@@ -43,6 +46,7 @@ self.addEventListener('install', (event) => {
       })
       .catch(err => {
         // 某些资源（如图标）可能尚未创建，不阻塞安装
+        // 运行时仍会按需缓存
         console.warn('[SW] Pre-cache partial failure:', err.message);
       })
   );
@@ -68,39 +72,60 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ====== Fetch：缓存优先策略 ======
+// ====== 工具：将网络响应写入缓存 ======
+function putInCache(request, response) {
+  if (!response || response.status !== 200 || response.type === 'opaque') return;
+  const copy = response.clone();
+  caches.open(CACHE_NAME).then(cache => {
+    cache.put(request, copy);
+  });
+}
+
+// ====== Fetch ======
 self.addEventListener('fetch', (event) => {
+  const request = event.request;
+
   // 只处理 GET 请求
-  if (event.request.method !== 'GET') return;
+  if (request.method !== 'GET') return;
 
   // 跳过 chrome-extension 等非 http(s) 请求
-  if (!event.request.url.startsWith('http')) return;
+  if (!request.url.startsWith('http')) return;
 
+  const isSameOrigin = new URL(request.url).origin === self.location.origin;
+
+  // ---- 跨域资源（CDN 等）：缓存优先，减少对外网依赖 ----
+  if (!isSameOrigin) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        if (cached) return cached;
+        return fetch(request).then(response => {
+          putInCache(request, response);
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // ---- 同源资源：网络优先，保证新版本立即生效；离线时回退到缓存 ----
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      if (cachedResponse) {
-        // 缓存命中，直接返回
-        return cachedResponse;
-      }
+    fetch(request)
+      .then(response => {
+        putInCache(request, response);
+        return response;
+      })
+      .catch(() => {
+        return caches.match(request).then(cached => {
+          if (cached) return cached;
 
-      // 缓存未命中，请求网络
-      return fetch(event.request).then(networkResponse => {
-        // 将网络响应加入缓存（仅缓存成功响应）
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // 网络不可用且缓存未命中 —— 对于 HTML 页面返回离线提示
-        if (event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('./index.html');
-        }
-        // 其他资源静默失败
-        return new Response('', { status: 408 });
-      });
-    })
+          // 完全离线且无缓存 —— HTML 导航请求回退到首页
+          if (request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+
+          // 其他资源静默失败
+          return new Response('', { status: 408 });
+        });
+      })
   );
 });
