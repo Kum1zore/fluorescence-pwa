@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>图标生成器 — 荧光检测平台</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  h2 { color: #1565C0; }
+  .preview { text-align: center; margin: 20px 0; }
+  button { display: block; width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: #42A5F5; color: #fff; font-size: 16px; cursor: pointer; margin: 8px 0; }
+  button:hover { background: #1E88E5; }
+  .sizes { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .size-chip { background: #E3F2FD; padding: 6px 14px; border-radius: 20px; font-size: 13px; color: #1565C0; }
+  #status { color: #757575; font-size: 14px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h2>荧光检测平台 — 图标生成器</h2>
+<p>点击按钮，自动下载全部 8 个尺寸的 PNG 图标。</p>
+
+<div class="preview">
+  <img id="preview" src="icon.svg" width="120" height="120">
+</div>
+
+<div class="sizes">
+  <span class="size-chip">72</span>
+  <span class="size-chip">96</span>
+  <span class="size-chip">128</span>
+  <span class="size-chip">144</span>
+  <span class="size-chip">152</span>
+  <span class="size-chip">192</span>
+  <span class="size-chip">384</span>
+  <span class="size-chip">512</span>
+</div>
+
+<button onclick="generateAll()">一键生成全部图标</button>
+<p id="status"></p>
+
+<script>
+  // SVG 直接内嵌，避免 fetch 跨域问题
+  var SVG_TEXT = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">'
+    + '<defs>'
+    + '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
+    + '<stop offset="0%" stop-color="#1565C0"/>'
+    + '<stop offset="100%" stop-color="#0D47A1"/>'
+    + '</linearGradient>'
+    + '<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">'
+    + '<stop offset="0%" stop-color="#FFFFFF"/>'
+    + '<stop offset="30%" stop-color="#E3F2FD"/>'
+    + '<stop offset="60%" stop-color="#90CAF9"/>'
+    + '<stop offset="100%" stop-color="#42A5F5" stop-opacity="0"/>'
+    + '</radialGradient>'
+    + '</defs>'
+    + '<rect x="48" y="48" width="416" height="416" rx="96" ry="96" fill="url(#bg)"/>'
+    + '<circle cx="256" cy="240" r="120" fill="url(#glow)"/>'
+    + '<rect x="136" y="200" width="240" height="160" rx="20" ry="20" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="3"/>'
+    + '<circle cx="256" cy="240" r="28" fill="#FFFFFF"/>'
+    + '<circle cx="256" cy="240" r="16" fill="#E3F2FD" opacity="0.9"/>'
+    + '<circle cx="256" cy="240" r="50" fill="none" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="2.5"/>'
+    + '<circle cx="256" cy="240" r="75" fill="none" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="2"/>'
+    + '<circle cx="256" cy="240" r="100" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1.5"/>'
+    + '<line x1="256" y1="210" x2="256" y2="270" stroke="#1565C0" stroke-width="2" opacity="0.6"/>'
+    + '<line x1="226" y1="240" x2="286" y2="240" stroke="#1565C0" stroke-width="2" opacity="0.6"/>'
+    + '</svg>';
+
+  var SIZES = [72, 96, 128, 144, 152, 192, 384, 512, 1024];
+
+  function generateAll() {
+    var status = document.getElementById('status');
+    var completed = 0;
+
+    for (var i = 0; i < SIZES.length; i++) {
+      var size = SIZES[i];
+      status.textContent = '生成 ' + size + 'x' + size + '... (' + (completed) + '/' + SIZES.length + ' 完成)';
+      generatePNG(size, function() {
+        completed++;
+        status.textContent = '已完成 ' + completed + '/' + SIZES.length;
+        if (completed === SIZES.length) {
+          status.textContent = '✅ 全部完成！8 个图标已下载。请把它们移动到 icons/ 文件夹下覆盖旧文件。';
+        }
+      });
+    }
+  }
+
+  function generatePNG(size, callback) {
+    var img = new Image();
+    var blob = new Blob([SVG_TEXT], { type: 'image/svg+xml' });
+    var url = URL.createObjectURL(blob);
+
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+
+      canvas.toBlob(function(b) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = 'icon-' + size + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if (callback) callback();
+      }, 'image/png');
+    };
+
+    img.src = url;
+  }
+</script>
+</body>
+</html>
