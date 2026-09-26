@@ -364,10 +364,23 @@
     // 使用 setTimeout 避免阻塞 UI
     setTimeout(function() {
       try {
-        // 运行处理流水线
-        var result = processPipeline(imageData, roi);
+        // ---- 自动校准（关闭时与旧版结果完全一致） ----
+        // 就地校正 imageData 的 RGB：线性化 → 自动白平衡 → 平场
+        var calibReport = calibrateFrame(imageData, roi);
+        console.log('[App] 校准报告:', JSON.stringify({
+          applied: calibReport.applied,
+          wb: calibReport.whiteBalance,
+          flatField: calibReport.flatField,
+          bgLevel: calibReport.backgroundLevel,
+          roiLevel: calibReport.roiLevel,
+          rel: calibReport.relativeIntensity,
+          exposure: calibReport.exposure.status
+        }));
 
-        // 裁剪 ROI 区域的原始图像
+        // 运行处理流水线
+        var result = processPipeline(imageData, roi, { calibrated: CALIB.ENABLED });
+
+        // 裁剪 ROI 区域的原始图像（此处为校准后的画面，便于跨设备比对）
         var originalCrop = _cropImageData(imageData, roi);
         console.log('[App] originalCrop:', originalCrop.width + '×' + originalCrop.height,
           '前10个像素:', Array.prototype.slice.call(originalCrop.data, 0, 10));
@@ -387,6 +400,13 @@
             height: roi.height
           },
           stats: result.stats,
+          relativeIntensity: calibReport.relativeIntensity,
+          exposure: calibReport.exposure,
+          calibration: {
+            applied: calibReport.applied,
+            whiteBalance: calibReport.whiteBalance,
+            flatField: calibReport.flatField
+          },
           originalCrop: originalCrop,
           pseudoCrop: pseudoCrop,
           timestamp: new Date().toISOString()
@@ -452,11 +472,16 @@
     var originalThumb = _generateThumbnail(_currentResult.originalCrop);
     var processedThumb = _generateThumbnail(_currentResult.pseudoCrop);
 
+    // 新增字段（relativeIntensity / exposure / calibration）是普通对象属性，
+    // IndexedDB 无需升级版本即可存储；旧记录缺这些字段时结果页显示 "--"
     var record = {
       timestamp: _currentResult.timestamp,
       roi: _currentResult.roi,
       meanIntensity: _currentResult.stats.meanIntensity,
       integratedDensity: _currentResult.stats.integratedDensity,
+      relativeIntensity: _currentResult.relativeIntensity,
+      exposure: _currentResult.exposure,
+      calibration: _currentResult.calibration,
       originalThumb: originalThumb,
       processedThumb: processedThumb
     };
@@ -577,12 +602,16 @@
         var pseudoCrop = results[1];
 
         // 构造兼容 _currentResult 的对象
+        // 旧记录没有校准相关字段，读取时为 undefined，展示层会显示 "--"
         _currentResult = {
           roi: record.roi,
           stats: {
             meanIntensity: record.meanIntensity,
             integratedDensity: record.integratedDensity
           },
+          relativeIntensity: record.relativeIntensity,
+          exposure: record.exposure,
+          calibration: record.calibration,
           originalCrop: originalCrop,
           pseudoCrop: pseudoCrop,
           timestamp: record.timestamp

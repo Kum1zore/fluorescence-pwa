@@ -126,23 +126,35 @@
       <canvas id="results-image-canvas" class="results-image-canvas"></canvas>
     </div>
 
+    <!-- 曝光/校准质量提示（过曝、欠曝时显示） -->
+    <div id="quality-warning" class="quality-warning" style="display:none;"></div>
+
     <!-- 荧光数据卡片 -->
     <div class="results-cards">
-      <div class="stat-card">
-        <span class="stat-label">平均荧光强度</span>
-        <span class="stat-value" id="stat-mean">--</span>
-        <span class="stat-unit">a.u.</span>
+      <!-- 主指标：跨设备可比，推荐用它做不同手机之间的比较 -->
+      <div class="stat-card stat-card-primary">
+        <span class="stat-label">相对荧光强度</span>
+        <span class="stat-value" id="stat-relative">--</span>
+        <span class="stat-unit">% · 跨设备可比</span>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">总荧光密度</span>
-        <span class="stat-value" id="stat-integrated">--</span>
-        <span class="stat-unit">a.u.</span>
+      <div class="stat-card-row">
+        <div class="stat-card">
+          <span class="stat-label">平均荧光强度</span>
+          <span class="stat-value" id="stat-mean">--</span>
+          <span class="stat-unit">a.u.</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">总荧光密度</span>
+          <span class="stat-value" id="stat-integrated">--</span>
+          <span class="stat-unit">a.u.</span>
+        </div>
       </div>
     </div>
 
-    <!-- ROI 和时间信息 -->
+    <!-- ROI、时间和校准状态 -->
     <div class="results-info">
       <span id="results-roi-size">ROI: --</span>
+      <span id="results-calibration">校准: --</span>
       <span id="results-time">时间: --</span>
     </div>
 
@@ -191,6 +203,7 @@
   <script src="js/storage.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/roi.js"></script>
+  <script src="js/calibration.js"></script>
   <script src="js/imageProc.js"></script>
   <script src="js/pseudocolor.js"></script>
   <script src="js/results.js"></script>

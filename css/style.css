@@ -17,6 +17,8 @@
   --success-green: #43A047;
   --border-gray: #BDBDBD;
   --text-gray:   #757575;
+  --warn-amber:  #F57C00;   /* 警告提示（过曝/欠曝），非错误 */
+  --warn-bg:     #FFF3E0;
 }
 
 /* ---- 基础重置 ---- */
@@ -382,10 +384,21 @@ html, body {
 
 .results-cards {
   display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 16px;
   background: var(--white);
   flex-shrink: 0;
+}
+
+.stat-card-row {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-card-row .stat-card {
+  flex: 1;
+  min-width: 0;
 }
 
 .stat-card {
@@ -395,6 +408,34 @@ html, body {
   padding: 16px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* 主指标卡：相对荧光强度是跨设备比较的核心指标 */
+.stat-card-primary {
+  background: linear-gradient(135deg, var(--blue-mid) 0%, var(--blue-dark) 100%);
+  box-shadow: 0 2px 10px rgba(30, 136, 229, 0.3);
+}
+
+.stat-card-primary .stat-label,
+.stat-card-primary .stat-unit {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.stat-card-primary .stat-value {
+  color: var(--white);
+}
+
+/* ---- 曝光/校准质量提示 ---- */
+.quality-warning {
+  margin: 12px 16px 0;
+  padding: 10px 14px;
+  background: var(--warn-bg);
+  border-left: 4px solid var(--warn-amber);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #E65100;
+  flex-shrink: 0;
 }
 
 .stat-label {
@@ -419,7 +460,9 @@ html, body {
 
 .results-info {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 4px 12px;
   padding: 8px 16px;
   font-size: 13px;
   color: var(--text-gray);

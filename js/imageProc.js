@@ -209,8 +209,22 @@ function calculateStats(imageData, roi) {
 }
 
 // ---- 完整处理流水线 ----
+// options.calibrated = true 时进入「校准模式」，跳过内容自适应的直方图拉伸。
+//
+// 为什么要跳过直方图拉伸：
+//   拉伸窗口由图像内容决定（0.5% / 99.5% 分位数），会把设备之间的
+//   亮度差异重新引入，抵消白平衡归一化的效果 —— 同一张芯片在不同手机上
+//   会被拉伸成不同结果，正是要消除的误差来源。
+//   校准后背景已被归一到固定水平（CALIB.TARGET_BG_LEVEL），
+//   减去背景即得到跨设备可比的信号。
+//
+// 未校准时行为与旧版完全一致，历史数据与旧结果数值不变。
+//
 // 返回 { processedData: ImageData, stats: { meanIntensity, integratedDensity } }
-function processPipeline(imageData, roi) {
+function processPipeline(imageData, roi, options) {
+  options = options || {};
+  var calibrated = !!options.calibrated;
+
   // 复制输入数据（流水线会原地修改，保留原始数据）
   var w = imageData.width;
   var h = imageData.height;
@@ -228,8 +242,11 @@ function processPipeline(imageData, roi) {
   // 2. 中值滤波
   copy = medianFilter(copy);
 
-  // 3. 直方图拉伸
-  histogramStretch(copy);
+  // 3. 对比度处理
+  if (!calibrated) {
+    histogramStretch(copy);
+  }
+  // 校准模式：保持线性对应关系，不做内容自适应的拉伸（见上方说明）
 
   // 4. 背景扣除
   subtractBackground(copy);
@@ -246,6 +263,6 @@ function processPipeline(imageData, roi) {
 
 // ---- 仅处理 ROI 子区域 ----
 // 从完整图像中裁剪 ROI 区域，返回该区域的处理结果
-function processROI(imageData, roi) {
-  return processPipeline(imageData, roi);
+function processROI(imageData, roi, options) {
+  return processPipeline(imageData, roi, options);
 }

@@ -8,11 +8,34 @@ function displayResults(record) {
   document.getElementById('stat-mean').textContent = formatNumber(record.stats.meanIntensity);
   document.getElementById('stat-integrated').textContent = formatNumber(record.stats.integratedDensity);
 
-  // ROI 尺寸和时间
+  // 相对荧光强度 I_rel = (ROI - 背景) / 背景 —— 跨设备可比的核心指标
+  // 内部按比值存储（0.35 表示比背景亮 35%），展示时换算成百分比
+  var relEl = document.getElementById('stat-relative');
+  var rel = record.relativeIntensity;
+  if (typeof rel === 'number' && isFinite(rel)) {
+    relEl.textContent = formatNumber(rel * 100);
+  } else {
+    relEl.textContent = '--';   // 旧记录 / 校准未生效
+  }
+
+  // 曝光质量提示
+  var warnEl = document.getElementById('quality-warning');
+  var exp = record.exposure;
+  if (exp && exp.status && exp.status !== 'ok' && exp.message) {
+    warnEl.textContent = '⚠ ' + exp.message;
+    warnEl.style.display = 'block';
+  } else {
+    warnEl.textContent = '';
+    warnEl.style.display = 'none';
+  }
+
+  // ROI 尺寸、时间、校准状态
   document.getElementById('results-roi-size').textContent =
     'ROI: ' + record.roi.width + '×' + record.roi.height + ' px';
   document.getElementById('results-time').textContent =
     '时间: ' + formatDate(record.timestamp);
+  document.getElementById('results-calibration').textContent =
+    describeCalibration(record.calibration);
 
   // 重置标签为"原图"
   document.getElementById('tab-original').classList.add('active');
