@@ -53,7 +53,9 @@ function initCamera(videoEl) {
           videoEl.onloadedmetadata = function() {
             videoEl.play().then(function() {
               _cameraReady = true;
-              // 校准第 1 步：锁定成像参数，失败不影响拍照
+              // 先确保自动对焦是开着的（防止镜头停在别处导致画面发糊），
+              // 再按需锁定成像参数。两者失败都不影响拍照。
+              restoreAutoFocus();
               lockCameraParams();
               resolve(stream);
             }).catch(function(err) {
@@ -90,6 +92,41 @@ function initCamera(videoEl) {
     });
 }
 
+// ---- 确保自动对焦处于开启状态 ----
+// 单独拎出来、且不挂在 LOCK_CAMERA 开关下，是因为它属于「恢复」而不是「校准」：
+// 万一镜头因为任何原因停在了某个固定位置（比如旧版本锁过手动对焦），
+// 这里主动要一次连续对焦把它拉回来。不支持就静默跳过。
+function restoreAutoFocus() {
+  if (!_currentStream) return;
+
+  var track = _currentStream.getVideoTracks()[0];
+  if (!track || typeof track.getCapabilities !== 'function') return;
+
+  var caps = null;
+  try {
+    caps = track.getCapabilities();
+  } catch (e) {
+    return;
+  }
+  var list = caps && caps.focusMode;
+  if (!list || typeof list.indexOf !== 'function') return;
+
+  // 连续对焦最省心；退而求其次用单次对焦，也能让画面重新清晰
+  var want = null;
+  if (list.indexOf('continuous') >= 0) want = 'continuous';
+  else if (list.indexOf('single-shot') >= 0) want = 'single-shot';
+  if (!want) return;
+
+  track.applyConstraints({ advanced: [{ focusMode: want }] })
+    .then(function() {
+      console.log('[Camera] 自动对焦已开启:', want);
+    })
+    .catch(function(err) {
+      // 设备不给这个权限也无所谓，保持系统默认行为即可
+      console.warn('[Camera] 开启自动对焦失败（忽略）:', err && err.message);
+    });
+}
+
 // ---- 锁定成像参数（自动校准 A1） ----
 // 目标：关闭自动白平衡 / 自动曝光 / 自动对焦，减少帧间与设备间差异。
 // 注意：这些属性在 W3C 规范里合法，但各机型实际支持率参差不齐，
@@ -99,7 +136,7 @@ function lockCameraParams() {
   _lockState = { supported: [], applied: [], failed: [], note: '' };
 
   if (!CALIB.ENABLED || !CALIB.LOCK_CAMERA) {
-    _lockState.note = '自动校准已关闭，未锁定相机参数';
+    _lockState.note = '未开启相机参数锁定（默认如此）';
     return _lockState;
   }
 
@@ -146,7 +183,13 @@ function lockCameraParams() {
   // 优先 manual（完全锁定），其次 none（关闭自动算法）
   pick('whiteBalanceMode', ['manual', 'none']);
   pick('exposureMode', ['manual', 'none']);
-  pick('focusMode', ['manual', 'none']);
+
+  // 绝对不要锁 focusMode —— 这里踩过坑，记录一下：
+  // 设成 'manual' 而不给 focusDistance，镜头会停在当时的物理位置上再也不动，
+  // 取景画面和拍出来的照片全是糊的（实测就发生了这个）。
+  // 而且对焦根本不是「光度参数」：它不影响荧光颜色，也不影响比值，
+  // 糊了只会让测到的强度变低 —— 有百害而无一利。
+  // 自动对焦保持开启。
 
   if (desired.length === 0) {
     _lockState.note = '该设备不支持锁定成像参数，已跳过';

@@ -2,7 +2,7 @@
 // 策略：同源资源「网络优先 + 缓存回退」，跨域资源「缓存优先」
 // 网络优先保证每次推送的新代码立即生效，离线时自动回退到缓存
 
-const CACHE_NAME = 'fluorescence-v3';
+const CACHE_NAME = 'fluorescence-v4';
 
 // 需要预缓存的所有静态资源
 const PRECACHE_URLS = [

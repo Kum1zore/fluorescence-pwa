@@ -185,7 +185,9 @@
 - [x] `js/constants.js` — 新增 `CALIB` 参数块
 - [x] `js/calibration.js` — 新建校准模块
   - [x] `_buildSRGBLUT()` / `_buildLinToSRGBLUT()` — sRGB ↔ 线性光查找表
-  - [x] A1 `lockCameraParams()`（在 `js/camera.js`）— 锁定白平衡/曝光/对焦
+  - [x] A1 `lockCameraParams()`（在 `js/camera.js`）— 锁定白平衡/曝光。
+        **默认关闭**（`CALIB.LOCK_CAMERA = false`），见下方「A1 的教训」
+  - [x] `restoreAutoFocus()` — 确保自动对焦开启（不挂在 A1 开关下）
   - [x] A2 `estimateBackgroundRef()` — 边缘背景参考估计（裁剪均值）
   - [x] A2 `computeWhiteBalanceGains()` — 各通道归一到固定目标
   - [x] A3 `_estimateRegionMeans()` — ROI 线性光均值
@@ -219,6 +221,24 @@
       —— 这是唯一的硬性成功标准
 - [ ] 相机参数锁定在真机上是否静默降级（不支持的机型不应报错）
 - [ ] 中低端安卓机上的实际耗时是否仍在 2s 内
+
+### A1 的教训（真机回归）
+
+第一版把 `focusMode` 也锁成了 `manual`，**导致真机上取景画面和照片全是糊的**。
+
+原因是：`whiteBalanceMode` / `exposureMode` / `focusMode` 设成 `'manual'`
+而不给具体数值（`focusDistance` / `exposureTime` / `colorTemperature`）时，
+规范行为是把**当前值冻住**，而不是给一个确定的好值。我们在
+`loadedmetadata` 时就下发，此时自动对焦/自动曝光通常还没收敛，
+冻住的可能是错误的初始值。
+
+三条结论：
+1. **对焦永远不上锁。** 对焦不是光度参数，不影响颜色也不影响比值，
+   糊了只会让测到的强度变低 —— 有百害而无一利。
+2. **A1 默认关闭。** A2/A3 是「测量并校正」，不依赖相机是否听话；
+   1.938% 的跨设备一致性本来就是在没有 A1 的情况下达成的。A1 收益有限、风险不小。
+3. **改相机参数属于高风险改动，必须真机验证。** 合成数据测不到这类问题
+   —— 它根本没有真实摄像头。
 
 ### 已知局限
 - 手机 ISP 的局部色调映射/HDR 无法从浏览器关闭，也无法用数学反解，
